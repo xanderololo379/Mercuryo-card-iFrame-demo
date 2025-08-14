@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mercuryo Spend Card Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .header p {
+            margin: 10px 0 0 0;
+            opacity: 0.9;
+        }
+        
+        .iframe-container {
+            position: relative;
+            width: 100%;
+            height: 800px;
+            border: none;
+        }
+        
+        .iframe-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #666;
+            font-size: 16px;
+        }
+        
+        .info {
+            padding: 20px;
+            background-color: #ecf0f1;
+            border-top: 1px solid #ddd;
+        }
+        
+        .info h3 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        
+        .info p {
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+        
+        .info a {
+            color: #3498db;
+            text-decoration: none;
+        }
+        
+        .info a:hover {
+            text-decoration: underline;
+        }
+        
+        @media (max-width: 768px) {
+            .iframe-container {
+                height: 600px;
+            }
+            
+            body {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Mercuryo Spend Card Demo</h1>
+            <p>Interactive Spend Card Details Interface</p>
+        </div>
+        
+        <div class="iframe-container">
+            <div class="loading">Loading Mercuryo Spend Card interface...</div>
+            <iframe 
+                src="https://sandbox-spend-app.mrcr.io/?init_token_type=sdk_partner_spend_card_details_authorization&init_token=0e5852d2a89956503"
+                title="Mercuryo Spend Card Details"
+                allowfullscreen
+                loading="lazy">
+                <p>Your browser does not support iframes. Please visit the 
+                <a href="https://sandbox-spend-app.mrcr.io/?init_token_type=sdk_partner_spend_card_details_authorization&init_token=0e5852d2a89956503" target="_blank">
+                Mercuryo Spend Card interface directly</a>.</p>
+            </iframe>
+        </div>
+        
+        <div class="info">
+            <h3>About This Demo</h3>
+            <p>This page demonstrates the Mercuryo Spend Card Details interface embedded as an iframe. 
+            The interface allows users to view and manage their virtual payment card details.</p>
+            
+            <p><strong>Features:</strong></p>
+            <ul>
+                <li>View spend card details and balance</li>
+                <li>Card management functionality</li>
+                <li>Transaction history</li>
+                <li>Secure sandbox environment</li>
+            </ul>
+            
+            <p><strong>Documentation:</strong> 
+            <a href="https://spend-api.redoc.ly/#section/Scenarios/Spend-Card-Details" target="_blank">
+            Mercuryo Spend Card API Docs</a></p>
+            
+            <p><em>Note: This is a sandbox environment for testing purposes.</em></p>
+        </div>
+    </div>
+
+    <script>
+        // Hide loading message when iframe loads
+        const iframe = document.querySelector('iframe');
+        const loading = document.querySelector('.loading');
+        
+        iframe.addEventListener('load', function() {
+            loading.style.display = 'none';
+        });
+        
+        // Handle iframe load errors
+        iframe.addEventListener('error', function() {
+            loading.innerHTML = 'Failed to load Mercuryo interface. <a href="' + iframe.src + '" target="_blank">Open in new tab</a>';
+        });
+    </script>
+</body>
+</html>
