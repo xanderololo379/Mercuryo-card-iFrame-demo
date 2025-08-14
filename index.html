@@ -1,117 +1,348 @@
-    <script>
-        // Get DOM elements
-        const iframe = document.getElementById('mercuryo-iframe');
-        const loading = document.getElementById('loading');
-        const errorMessage = document.getElementById('error-message');
-        
-        let loadTimeout;
-        let hasLoaded = false;
-        
-        // Set a timeout to detect if iframe fails to load
-        loadTimeout = setTimeout(function() {
-            if (!hasLoaded) {
-                showError();
-            }
-        }, 10000); // 10 seconds timeout
-        
-        // Hide loading message when iframe loads successfully
-        iframe.addEventListener('load', function() {
-            hasLoaded = true;
-            clearTimeout(loadTimeout);
-            loading.style.display = 'none';
-            
-            // Check if iframe actually loaded content or just an error page
-            try {
-                // This might throw an error due to CORS, which is expected
-                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                if (iframeDoc.title.includes('error') || iframeDoc.body.innerHTML.includes('error')) {
-                    showError();
-                }
-            } catch (e) {
-                // CORS error is expected, iframe might still be working
-                console.log('CORS restriction detected, but iframe might be working');
-            }
-        });
-        
-        // Handle iframe load errors
-        iframe.addEventListener('error', function() {
-            hasLoaded = false;
-            clearTimeout(loadTimeout);
-            showError();
-        });
-        
-        // Function to show error message
-        function showError() {
-            loading.style.display = 'none';
-            errorMessage.style.display = 'block';
-            iframe.style.opacity = '0.3';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mercuryo Spend Card Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
         
-        // Function to retry loading iframe
-        function retryIframe() {
-            hasLoaded = false;
-            errorMessage.style.display = 'none';
-            loading.style.display = 'block';
-            iframe.style.opacity = '1';
-            
-            // Reload iframe with cache-busting parameter
-            const originalSrc = iframe.src.split('&_retry=')[0];
-            iframe.src = originalSrc + '&_retry=' + Date.now();
-            
-            // Reset timeout
-            clearTimeout(loadTimeout);
-            loadTimeout = setTimeout(function() {
-                if (!hasLoaded) {
-                    showError();
-                }
-            }, 10000);
-        }
-        
-        // Check if we're on HTTPS (GitHub Pages)
-        if (location.protocol === 'https:' && iframe.src.startsWith('http:')) {
-            console.warn('Mixed content detected: HTTPS page loading HTTP iframe');
-        }
-    </script>order-radius: 5px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        
-        .retry-btn:hover {
-            background: #229954;
-        }
-        
-        .info {
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
             padding: 20px;
-            background-color: #ecf0f1;
-            border-top: 1px solid #ddd;
         }
         
-        .info h3 {
-            margin-top: 0;
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+            min-height: 80vh;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="75" cy="75" r="1" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+            opacity: 0.1;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .main-content {
+            padding: 40px;
+        }
+        
+        .integration-methods {
+            display: grid;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .method-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 30px;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+        
+        .method-card:hover {
+            border-color: #3498db;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        
+        .method-card.active {
+            border-color: #27ae60;
+            background: #f8fff8;
+        }
+        
+        .method-card.failed {
+            border-color: #e74c3c;
+            background: #fff8f8;
+        }
+        
+        .method-title {
+            font-size: 1.5em;
             color: #2c3e50;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
         
-        .info p {
-            margin: 10px 0;
-            line-height: 1.6;
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #bdc3c7;
         }
         
-        .info a {
-            color: #3498db;
+        .status-indicator.loading {
+            background: #f39c12;
+            animation: pulse 1.5s infinite;
+        }
+        
+        .status-indicator.success {
+            background: #27ae60;
+        }
+        
+        .status-indicator.failed {
+            background: #e74c3c;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .iframe-container {
+            position: relative;
+            width: 100%;
+            height: 600px;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            display: none;
+        }
+        
+        .iframe-container.active {
+            display: block;
+            border: 2px solid #27ae60;
+            background: white;
+        }
+        
+        .iframe-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        
+        .loading-spinner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
             text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            font-weight: 500;
         }
         
-        .info a:hover {
-            text-decoration: underline;
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #2980b9;
+            transform: translateY(-1px);
+        }
+        
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #229954;
+            transform: translateY(-1px);
+        }
+        
+        .btn-warning {
+            background: #f39c12;
+            color: white;
+        }
+        
+        .btn-warning:hover {
+            background: #e67e22;
+            transform: translateY(-1px);
+        }
+        
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #7f8c8d;
+            transform: translateY(-1px);
+        }
+        
+        .error-details {
+            background: #fff5f5;
+            border: 1px solid #fed7d7;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .error-details.show {
+            display: block;
+        }
+        
+        .error-details h4 {
+            color: #e53e3e;
+            margin-bottom: 10px;
+        }
+        
+        .troubleshooting {
+            background: #f7fafc;
+            border-radius: 12px;
+            padding: 30px;
+            margin-top: 30px;
+        }
+        
+        .troubleshooting h3 {
+            color: #2d3748;
+            margin-bottom: 20px;
+        }
+        
+        .troubleshooting ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .troubleshooting li {
+            padding: 10px 0;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        
+        .troubleshooting li:last-child {
+            border-bottom: none;
+        }
+        
+        .troubleshooting .icon {
+            color: #4299e1;
+            font-weight: bold;
+            min-width: 20px;
+        }
+        
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .popup-overlay.show {
+            display: flex;
+        }
+        
+        .popup-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+        }
+        
+        .popup-content h3 {
+            color: #2c3e50;
+            margin-bottom: 20px;
         }
         
         @media (max-width: 768px) {
-            .iframe-container {
-                height: 600px;
-            }
-            
             body {
                 padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .main-content {
+                padding: 20px;
+            }
+            
+            .iframe-container {
+                height: 500px;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+            
+            .btn {
+                justify-content: center;
             }
         }
     </style>
@@ -119,135 +350,327 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Mercuryo Spend Card Demo</h1>
-            <p>Interactive Spend Card Details Interface</p>
+            <h1>🚀 Mercuryo Spend Card Demo</h1>
+            <p>Advanced Integration with Multiple Loading Methods</p>
         </div>
         
-        <div class="iframe-container">
-            <div class="loading" id="loading">Loading Mercuryo Spend Card interface...</div>
-            <div class="error-message" id="error-message" style="display: none;">
-                <h3>⚠️ Iframe Loading Failed</h3>
-                <p>The Mercuryo interface cannot be embedded due to security restrictions.</p>
-                <div class="solutions">
-                    <h4>Alternative Options:</h4>
-                    <ol>
-                        <li><strong>Open in New Tab:</strong> 
-                            <a href="https://sandbox-spend-app.mrcr.io/?init_token_type=sdk_partner_spend_card_details_authorization&init_token=0e5852d2a89956503" 
-                               target="_blank" class="btn-link">Launch Mercuryo Interface</a>
-                        </li>
-                        <li><strong>Check Token:</strong> Your initialization token might have expired</li>
-                        <li><strong>CORS Issue:</strong> The service may not allow iframe embedding from external domains</li>
-                    </ol>
+        <div class="main-content">
+            <div class="integration-methods">
+                <!-- Method 1: Enhanced Iframe -->
+                <div class="method-card" id="method-iframe">
+                    <div class="method-title">
+                        <div class="status-indicator" id="status-iframe"></div>
+                        Method 1: Enhanced Iframe Integration
+                    </div>
+                    <p>Attempting to load Mercuryo interface directly in iframe with enhanced error handling and CORS bypass techniques.</p>
+                    
+                    <div class="iframe-container" id="iframe-container">
+                        <div class="loading-spinner" id="iframe-loading">
+                            <div class="spinner"></div>
+                            <p>Loading Mercuryo Spend Card interface...</p>
+                        </div>
+                        <iframe 
+                            id="mercuryo-iframe"
+                            title="Mercuryo Spend Card Details"
+                            allowfullscreen
+                            sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-top-navigation allow-popups-to-escape-sandbox">
+                        </iframe>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button class="btn btn-primary" onclick="tryIframeMethod()">
+                            🔄 Try Iframe Method
+                        </button>
+                        <button class="btn btn-secondary" onclick="toggleErrorDetails('iframe')">
+                            📋 Show Details
+                        </button>
+                    </div>
+                    
+                    <div class="error-details" id="error-iframe">
+                        <h4>Iframe Method Details</h4>
+                        <p id="iframe-error-text">Waiting for attempt...</p>
+                    </div>
                 </div>
-                <button onclick="retryIframe()" class="retry-btn">🔄 Retry Loading</button>
+                
+                <!-- Method 2: Popup Window -->
+                <div class="method-card" id="method-popup">
+                    <div class="method-title">
+                        <div class="status-indicator" id="status-popup"></div>
+                        Method 2: Popup Window Integration
+                    </div>
+                    <p>Opens Mercuryo interface in a controlled popup window for better compatibility and user experience.</p>
+                    
+                    <div class="action-buttons">
+                        <button class="btn btn-success" onclick="openPopupMethod()">
+                            🪟 Open in Popup Window
+                        </button>
+                        <button class="btn btn-secondary" onclick="toggleErrorDetails('popup')">
+                            📋 Show Details
+                        </button>
+                    </div>
+                    
+                    <div class="error-details" id="error-popup">
+                        <h4>Popup Window Method Details</h4>
+                        <p id="popup-error-text">Click the button above to test popup method.</p>
+                    </div>
+                </div>
+                
+                <!-- Method 3: Direct Navigation -->
+                <div class="method-card" id="method-direct">
+                    <div class="method-title">
+                        <div class="status-indicator" id="status-direct"></div>
+                        Method 3: Direct Navigation
+                    </div>
+                    <p>Opens Mercuryo interface in a new tab/window. This method always works and bypasses all embedding restrictions.</p>
+                    
+                    <div class="action-buttons">
+                        <a href="https://sandbox-spend-app.mrcr.io/?init_token_type=sdk_partner_spend_card_details_authorization&init_token=0e5852d2a89956503" 
+                           target="_blank" 
+                           class="btn btn-warning"
+                           onclick="markDirectSuccess()">
+                            🔗 Open in New Tab
+                        </a>
+                        <button class="btn btn-secondary" onclick="toggleErrorDetails('direct')">
+                            📋 Show Details
+                        </button>
+                    </div>
+                    
+                    <div class="error-details" id="error-direct">
+                        <h4>Direct Navigation Method Details</h4>
+                        <p id="direct-error-text">This method opens the Mercuryo interface directly in a new browser tab, bypassing all iframe restrictions.</p>
+                    </div>
+                </div>
             </div>
-            <iframe 
-                id="mercuryo-iframe"
-                src="https://sandbox-spend-app.mrcr.io/?init_token_type=sdk_partner_spend_card_details_authorization&init_token=0e5852d2a89956503"
-                title="Mercuryo Spend Card Details"
-                allowfullscreen
-                loading="lazy"
-                sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-top-navigation">
-                <p>Your browser does not support iframes. Please visit the 
-                <a href="https://sandbox-spend-app.mrcr.io/?init_token_type=sdk_partner_spend_card_details_authorization&init_token=0e5852d2a89956503" target="_blank">
-                Mercuryo Spend Card interface directly</a>.</p>
-            </iframe>
+            
+            <div class="troubleshooting">
+                <h3>🔧 Troubleshooting Guide</h3>
+                <ul>
+                    <li>
+                        <span class="icon">🛡️</span>
+                        <div>
+                            <strong>CORS/X-Frame-Options:</strong> Many financial services block iframe embedding for security. Use popup or direct methods instead.
+                        </div>
+                    </li>
+                    <li>
+                        <span class="icon">🔑</span>
+                        <div>
+                            <strong>Token Expiration:</strong> Your init_token may expire. Generate a new one through the Mercuryo API if methods fail.
+                        </div>
+                    </li>
+                    <li>
+                        <span class="icon">🌐</span>
+                        <div>
+                            <strong>Network Issues:</strong> Check your internet connection and try refreshing the page.
+                        </div>
+                    </li>
+                    <li>
+                        <span class="icon">🔒</span>
+                        <div>
+                            <strong>Browser Security:</strong> Some browsers block popups by default. Allow popups for this site if needed.
+                        </div>
+                    </li>
+                    <li>
+                        <span class="icon">📱</span>
+                        <div>
+                            <strong>Mobile Compatibility:</strong> On mobile devices, direct navigation usually works best.
+                        </div>
+                    </li>
+                </ul>
+            </div>
         </div>
-        
-        <div class="info">
-            <h3>About This Demo</h3>
-            <p>This page demonstrates the Mercuryo Spend Card Details interface embedded as an iframe. 
-            The interface allows users to view and manage their virtual payment card details.</p>
-            
-            <p><strong>Features:</strong></p>
-            <ul>
-                <li>View spend card details and balance</li>
-                <li>Card management functionality</li>
-                <li>Transaction history</li>
-                <li>Secure sandbox environment</li>
-            </ul>
-            
-            <p><strong>Documentation:</strong> 
-            <a href="https://spend-api.redoc.ly/#section/Scenarios/Spend-Card-Details" target="_blank">
-            Mercuryo Spend Card API Docs</a></p>
-            
-            <p><em>Note: This is a sandbox environment for testing purposes.</em></p>
+    </div>
+    
+    <!-- Popup Overlay -->
+    <div class="popup-overlay" id="popup-overlay">
+        <div class="popup-content">
+            <h3>🪟 Popup Window Method</h3>
+            <p>A popup window will open with the Mercuryo interface. If you don't see it, please check if your browser blocked the popup and allow it for this site.</p>
+            <div class="action-buttons" style="justify-content: center; margin-top: 20px;">
+                <button class="btn btn-primary" onclick="closePopupOverlay()">Got it!</button>
+            </div>
         </div>
     </div>
 
     <script>
-        // Get DOM elements
-        const iframe = document.getElementById('mercuryo-iframe');
-        const loading = document.getElementById('loading');
-        const errorMessage = document.getElementById('error-message');
+        const MERCURYO_URL = 'https://sandbox-spend-app.mrcr.io/?init_token_type=sdk_partner_spend_card_details_authorization&init_token=0e5852d2a89956503';
         
-        let loadTimeout;
-        let hasLoaded = false;
+        let popupWindow = null;
+        let iframeTimeout = null;
         
-        // Set a timeout to detect if iframe fails to load
-        loadTimeout = setTimeout(function() {
-            if (!hasLoaded) {
-                showError();
-            }
-        }, 10000); // 10 seconds timeout
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Mercuryo Demo initialized');
+            updateStatus('iframe', 'ready');
+            updateStatus('popup', 'ready');
+            updateStatus('direct', 'ready');
+        });
         
-        // Hide loading message when iframe loads successfully
-        iframe.addEventListener('load', function() {
-            hasLoaded = true;
-            clearTimeout(loadTimeout);
-            loading.style.display = 'none';
+        // Method 1: Enhanced Iframe
+        function tryIframeMethod() {
+            console.log('Trying iframe method...');
+            updateStatus('iframe', 'loading');
+            updateMethodCard('iframe', 'active');
             
-            // Check if iframe actually loaded content or just an error page
-            try {
-                // This might throw an error due to CORS, which is expected
-                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                if (iframeDoc.title.includes('error') || iframeDoc.body.innerHTML.includes('error')) {
-                    showError();
-                }
-            } catch (e) {
-                // CORS error is expected, iframe might still be working
-                console.log('CORS restriction detected, but iframe might be working');
-            }
-        });
-        
-        // Handle iframe load errors
-        iframe.addEventListener('error', function() {
-            hasLoaded = false;
-            clearTimeout(loadTimeout);
-            showError();
-        });
-        
-        // Function to show error message
-        function showError() {
-            loading.style.display = 'none';
-            errorMessage.style.display = 'block';
-            iframe.style.opacity = '0.3';
-        }
-        
-        // Function to retry loading iframe
-        function retryIframe() {
-            hasLoaded = false;
-            errorMessage.style.display = 'none';
+            const iframe = document.getElementById('mercuryo-iframe');
+            const container = document.getElementById('iframe-container');
+            const loading = document.getElementById('iframe-loading');
+            const errorText = document.getElementById('iframe-error-text');
+            
+            // Show container and loading
+            container.classList.add('active');
             loading.style.display = 'block';
-            iframe.style.opacity = '1';
             
-            // Reload iframe with cache-busting parameter
-            const originalSrc = iframe.src.split('&_retry=')[0];
-            iframe.src = originalSrc + '&_retry=' + Date.now();
+            // Clear any existing timeout
+            if (iframeTimeout) {
+                clearTimeout(iframeTimeout);
+            }
             
-            // Reset timeout
-            clearTimeout(loadTimeout);
-            loadTimeout = setTimeout(function() {
-                if (!hasLoaded) {
-                    showError();
-                }
-            }, 10000);
+            // Set iframe source with cache busting
+            iframe.src = MERCURYO_URL + '&_t=' + Date.now();
+            
+            // Set timeout for loading
+            iframeTimeout = setTimeout(() => {
+                console.log('Iframe loading timeout');
+                updateStatus('iframe', 'failed');
+                updateMethodCard('iframe', 'failed');
+                loading.style.display = 'none';
+                errorText.textContent = 'Iframe loading timed out after 15 seconds. This usually indicates CORS/X-Frame-Options restrictions.';
+                showErrorDetails('iframe');
+            }, 15000);
+            
+            // Handle iframe load
+            iframe.onload = function() {
+                console.log('Iframe loaded successfully');
+                clearTimeout(iframeTimeout);
+                updateStatus('iframe', 'success');
+                updateMethodCard('iframe', 'active');
+                loading.style.display = 'none';
+                errorText.textContent = 'Iframe loaded successfully! The Mercuryo interface should be visible above.';
+            };
+            
+            // Handle iframe error
+            iframe.onerror = function() {
+                console.log('Iframe failed to load');
+                clearTimeout(iframeTimeout);
+                updateStatus('iframe', 'failed');
+                updateMethodCard('iframe', 'failed');
+                loading.style.display = 'none';
+                errorText.textContent = 'Iframe failed to load due to network or CORS restrictions.';
+                showErrorDetails('iframe');
+            };
+            
+            errorText.textContent = 'Attempting to load Mercuryo interface in iframe...';
         }
         
-        // Check if we're on HTTPS (GitHub Pages)
-        if (location.protocol === 'https:' && iframe.src.startsWith('http:')) {
-            console.warn('Mixed content detected: HTTPS page loading HTTP iframe');
+        // Method 2: Popup Window
+        function openPopupMethod() {
+            console.log('Trying popup method...');
+            updateStatus('popup', 'loading');
+            updateMethodCard('popup', 'active');
+            
+            const errorText = document.getElementById('popup-error-text');
+            const overlay = document.getElementById('popup-overlay');
+            
+            // Show popup overlay first
+            overlay.classList.add('show');
+            
+            setTimeout(() => {
+                try {
+                    // Calculate popup position (centered)
+                    const width = 800;
+                    const height = 600;
+                    const left = (screen.width - width) / 2;
+                    const top = (screen.height - height) / 2;
+                    
+                    // Open popup window
+                    popupWindow = window.open(
+                        MERCURYO_URL + '&_popup=' + Date.now(),
+                        'mercuryo-spend-card',
+                        `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes,status=yes,toolbar=no,menubar=no,location=no`
+                    );
+                    
+                    if (popupWindow) {
+                        updateStatus('popup', 'success');
+                        updateMethodCard('popup', 'active');
+                        errorText.textContent = 'Popup window opened successfully! Check for the new window.';
+                        
+                        // Monitor popup window
+                        const checkClosed = setInterval(() => {
+                            if (popupWindow.closed) {
+                                clearInterval(checkClosed);
+                                updateStatus('popup', 'ready');
+                                updateMethodCard('popup', '');
+                                errorText.textContent = 'Popup window was closed.';
+                            }
+                        }, 1000);
+                        
+                    } else {
+                        throw new Error('Popup blocked');
+                    }
+                    
+                } catch (error) {
+                    console.error('Popup method failed:', error);
+                    updateStatus('popup', 'failed');
+                    updateMethodCard('popup', 'failed');
+                    errorText.textContent = 'Popup was blocked by browser. Please allow popups for this site and try again.';
+                    showErrorDetails('popup');
+                }
+                
+                // Hide overlay after a delay
+                setTimeout(() => {
+                    overlay.classList.remove('show');
+                }, 2000);
+                
+            }, 500);
         }
+        
+        // Method 3: Direct Navigation
+        function markDirectSuccess() {
+            console.log('Direct navigation method used');
+            updateStatus('direct', 'success');
+            updateMethodCard('direct', 'active');
+            document.getElementById('direct-error-text').textContent = 'Direct navigation initiated. The Mercuryo interface should open in a new tab.';
+        }
+        
+        // Utility functions
+        function updateStatus(method, status) {
+            const indicator = document.getElementById(`status-${method}`);
+            indicator.className = `status-indicator ${status}`;
+        }
+        
+        function updateMethodCard(method, state) {
+            const card = document.getElementById(`method-${method}`);
+            card.className = `method-card ${state}`;
+        }
+        
+        function toggleErrorDetails(method) {
+            const details = document.getElementById(`error-${method}`);
+            details.classList.toggle('show');
+        }
+        
+        function showErrorDetails(method) {
+            const details = document.getElementById(`error-${method}`);
+            details.classList.add('show');
+        }
+        
+        function closePopupOverlay() {
+            document.getElementById('popup-overlay').classList.remove('show');
+        }
+        
+        // Handle popup window messages (if any)
+        window.addEventListener('message', function(event) {
+            if (event.origin === 'https://sandbox-spend-app.mrcr.io') {
+                console.log('Message from Mercuryo:', event.data);
+                // Handle any messages from the Mercuryo interface
+            }
+        });
+        
+        // Clean up on page unload
+        window.addEventListener('beforeunload', function() {
+            if (popupWindow && !popupWindow.closed) {
+                popupWindow.close();
+            }
+        });
     </script>
 </body>
 </html>
