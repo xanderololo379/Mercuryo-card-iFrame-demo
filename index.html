@@ -1,63 +1,83 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mercuryo Spend Card Demo</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f5f5f5;
+    <script>
+        // Get DOM elements
+        const iframe = document.getElementById('mercuryo-iframe');
+        const loading = document.getElementById('loading');
+        const errorMessage = document.getElementById('error-message');
+        
+        let loadTimeout;
+        let hasLoaded = false;
+        
+        // Set a timeout to detect if iframe fails to load
+        loadTimeout = setTimeout(function() {
+            if (!hasLoaded) {
+                showError();
+            }
+        }, 10000); // 10 seconds timeout
+        
+        // Hide loading message when iframe loads successfully
+        iframe.addEventListener('load', function() {
+            hasLoaded = true;
+            clearTimeout(loadTimeout);
+            loading.style.display = 'none';
+            
+            // Check if iframe actually loaded content or just an error page
+            try {
+                // This might throw an error due to CORS, which is expected
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                if (iframeDoc.title.includes('error') || iframeDoc.body.innerHTML.includes('error')) {
+                    showError();
+                }
+            } catch (e) {
+                // CORS error is expected, iframe might still be working
+                console.log('CORS restriction detected, but iframe might be working');
+            }
+        });
+        
+        // Handle iframe load errors
+        iframe.addEventListener('error', function() {
+            hasLoaded = false;
+            clearTimeout(loadTimeout);
+            showError();
+        });
+        
+        // Function to show error message
+        function showError() {
+            loading.style.display = 'none';
+            errorMessage.style.display = 'block';
+            iframe.style.opacity = '0.3';
         }
         
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            overflow: hidden;
+        // Function to retry loading iframe
+        function retryIframe() {
+            hasLoaded = false;
+            errorMessage.style.display = 'none';
+            loading.style.display = 'block';
+            iframe.style.opacity = '1';
+            
+            // Reload iframe with cache-busting parameter
+            const originalSrc = iframe.src.split('&_retry=')[0];
+            iframe.src = originalSrc + '&_retry=' + Date.now();
+            
+            // Reset timeout
+            clearTimeout(loadTimeout);
+            loadTimeout = setTimeout(function() {
+                if (!hasLoaded) {
+                    showError();
+                }
+            }, 10000);
         }
         
-        .header {
-            background-color: #2c3e50;
-            color: white;
-            padding: 20px;
-            text-align: center;
+        // Check if we're on HTTPS (GitHub Pages)
+        if (location.protocol === 'https:' && iframe.src.startsWith('http:')) {
+            console.warn('Mixed content detected: HTTPS page loading HTTP iframe');
+        }
+    </script>order-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
         }
         
-        .header h1 {
-            margin: 0;
-            font-size: 24px;
-        }
-        
-        .header p {
-            margin: 10px 0 0 0;
-            opacity: 0.9;
-        }
-        
-        .iframe-container {
-            position: relative;
-            width: 100%;
-            height: 800px;
-            border: none;
-        }
-        
-        .iframe-container iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
-        
-        .loading {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: #666;
-            font-size: 16px;
+        .retry-btn:hover {
+            background: #229954;
         }
         
         .info {
@@ -104,12 +124,30 @@
         </div>
         
         <div class="iframe-container">
-            <div class="loading">Loading Mercuryo Spend Card interface...</div>
+            <div class="loading" id="loading">Loading Mercuryo Spend Card interface...</div>
+            <div class="error-message" id="error-message" style="display: none;">
+                <h3>⚠️ Iframe Loading Failed</h3>
+                <p>The Mercuryo interface cannot be embedded due to security restrictions.</p>
+                <div class="solutions">
+                    <h4>Alternative Options:</h4>
+                    <ol>
+                        <li><strong>Open in New Tab:</strong> 
+                            <a href="https://sandbox-spend-app.mrcr.io/?init_token_type=sdk_partner_spend_card_details_authorization&init_token=0e5852d2a89956503" 
+                               target="_blank" class="btn-link">Launch Mercuryo Interface</a>
+                        </li>
+                        <li><strong>Check Token:</strong> Your initialization token might have expired</li>
+                        <li><strong>CORS Issue:</strong> The service may not allow iframe embedding from external domains</li>
+                    </ol>
+                </div>
+                <button onclick="retryIframe()" class="retry-btn">🔄 Retry Loading</button>
+            </div>
             <iframe 
+                id="mercuryo-iframe"
                 src="https://sandbox-spend-app.mrcr.io/?init_token_type=sdk_partner_spend_card_details_authorization&init_token=0e5852d2a89956503"
                 title="Mercuryo Spend Card Details"
                 allowfullscreen
-                loading="lazy">
+                loading="lazy"
+                sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-top-navigation">
                 <p>Your browser does not support iframes. Please visit the 
                 <a href="https://sandbox-spend-app.mrcr.io/?init_token_type=sdk_partner_spend_card_details_authorization&init_token=0e5852d2a89956503" target="_blank">
                 Mercuryo Spend Card interface directly</a>.</p>
@@ -138,18 +176,78 @@
     </div>
 
     <script>
-        // Hide loading message when iframe loads
-        const iframe = document.querySelector('iframe');
-        const loading = document.querySelector('.loading');
+        // Get DOM elements
+        const iframe = document.getElementById('mercuryo-iframe');
+        const loading = document.getElementById('loading');
+        const errorMessage = document.getElementById('error-message');
         
+        let loadTimeout;
+        let hasLoaded = false;
+        
+        // Set a timeout to detect if iframe fails to load
+        loadTimeout = setTimeout(function() {
+            if (!hasLoaded) {
+                showError();
+            }
+        }, 10000); // 10 seconds timeout
+        
+        // Hide loading message when iframe loads successfully
         iframe.addEventListener('load', function() {
+            hasLoaded = true;
+            clearTimeout(loadTimeout);
             loading.style.display = 'none';
+            
+            // Check if iframe actually loaded content or just an error page
+            try {
+                // This might throw an error due to CORS, which is expected
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                if (iframeDoc.title.includes('error') || iframeDoc.body.innerHTML.includes('error')) {
+                    showError();
+                }
+            } catch (e) {
+                // CORS error is expected, iframe might still be working
+                console.log('CORS restriction detected, but iframe might be working');
+            }
         });
         
         // Handle iframe load errors
         iframe.addEventListener('error', function() {
-            loading.innerHTML = 'Failed to load Mercuryo interface. <a href="' + iframe.src + '" target="_blank">Open in new tab</a>';
+            hasLoaded = false;
+            clearTimeout(loadTimeout);
+            showError();
         });
+        
+        // Function to show error message
+        function showError() {
+            loading.style.display = 'none';
+            errorMessage.style.display = 'block';
+            iframe.style.opacity = '0.3';
+        }
+        
+        // Function to retry loading iframe
+        function retryIframe() {
+            hasLoaded = false;
+            errorMessage.style.display = 'none';
+            loading.style.display = 'block';
+            iframe.style.opacity = '1';
+            
+            // Reload iframe with cache-busting parameter
+            const originalSrc = iframe.src.split('&_retry=')[0];
+            iframe.src = originalSrc + '&_retry=' + Date.now();
+            
+            // Reset timeout
+            clearTimeout(loadTimeout);
+            loadTimeout = setTimeout(function() {
+                if (!hasLoaded) {
+                    showError();
+                }
+            }, 10000);
+        }
+        
+        // Check if we're on HTTPS (GitHub Pages)
+        if (location.protocol === 'https:' && iframe.src.startsWith('http:')) {
+            console.warn('Mixed content detected: HTTPS page loading HTTP iframe');
+        }
     </script>
 </body>
 </html>
